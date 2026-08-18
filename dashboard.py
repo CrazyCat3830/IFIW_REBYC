@@ -593,9 +593,17 @@ class DashboardWindow:
         """
         Handles alert selection events from the Recent Alerts listbox.
         """
-        alert_id = self._parse_selected_alert_id()
-        self.selected_alert_id = alert_id
-        self._refresh_forensics_panel(alert_id)
+        sel = self.alerts_list.curselection()
+        if not sel:
+            return
+
+        line = self.alerts_list.get(sel[0])
+        m = re.search(r"#(\d+)", line)
+        if not m:
+            return
+
+        self.selected_alert_id = int(m.group(1))
+        self._refresh_forensics_panel(self.selected_alert_id)
 
     # ---------------- helpers ----------------
     def _set_forensics_text(self, text: str):

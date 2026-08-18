@@ -29,9 +29,12 @@ Port Scan
 """
 
 _portscan_state: Dict[str, dict] = {}
-# Example: "{ 192.168.1.50": {"first_ts": 12:00:00, "last_ts": 12:00:00, "ports": {80, 443} } }
+# Example: {"192.168.1.50": {"first_ts": 12:00:00, "last_ts": 12:00:00, "ports": {80, 443}}}
 PORTSCAN_PORT_THRESHOLD = 50
 PORTSCAN_WINDOW_SECONDS = 30
+
+_last_portscan_alert: Dict[str, datetime] = {}
+PORTSCAN_SUPPRESS_SECONDS = 20
 
 
 def update_and_check_portscan(p: Packet) -> Optional[dict]:
@@ -42,38 +45,58 @@ def update_and_check_portscan(p: Packet) -> Optional[dict]:
     # Port scanning requires source IP, destination IP and destination port.
     if not p.src_ip or not p.dst_ip or p.dst_port is None:
         return None
+
     # Port scans are relevant only for transport protocols with ports.
     if p.proto_name not in ("tcp", "udp"):
         return None
 
     now: datetime = p.ts
+
     # Retrieve existing state for this source IP.
     state = _portscan_state.get(p.src_ip)
+
     # First packet seen from this source: create tracking state.
     if state is None:
         state = {"first_ts": now, "last_ts": now, "ports": set()}
-        _portscan_state[p.src_ip] = state  # Stores unique destination ports.
+        _portscan_state[p.src_ip] = state
+
     # Reset the detection window if it became too old.
     if (now - state["first_ts"]).total_seconds() > PORTSCAN_WINDOW_SECONDS:
         state["first_ts"] = now
         state["ports"].clear()
+
+    state["last_ts"] = now
+
     # Add the destination port to the set.
     # Using a set guarantees uniqueness.
-    state["last_ts"] = now
     state["ports"].add(int(p.dst_port))
 
     unique_ports = len(state["ports"])
+
     # If enough different ports were contacted within the window,
     # raise a PORT_SCAN alert.
     if unique_ports >= PORTSCAN_PORT_THRESHOLD:
+        last = _last_portscan_alert.get(p.src_ip)
+
+        # Avoid repeated PORT_SCAN alerts from the same source.
+        if last and (now - last).total_seconds() < PORTSCAN_SUPPRESS_SECONDS:
+            state["first_ts"] = now
+            state["ports"].clear()
+            return None
+
+        # Remember when the last alert was raised for this source.
+        _last_portscan_alert[p.src_ip] = now
+
         state["first_ts"] = now
         state["ports"].clear()
+
         return {
             "type": "PORT_SCAN",
             "severity": 7,
             "description": f"Port scan suspected from {p.src_ip}: {unique_ports} unique dst ports in {PORTSCAN_WINDOW_SECONDS}s",
             "evidence_key": p.src_ip,
         }
+
     return None
 
 

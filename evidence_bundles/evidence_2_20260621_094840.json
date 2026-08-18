@@ -1,0 +1,7 @@
+{
+  "incident_id": 2,
+  "packet_count": 1219,
+  "pcap_path": "evidence_bundles\\evidence_2_20260621_094840.pcap",
+  "sha256": "49503b53068c29527d6631df617ef717034998fa9383f41cb451429570b689a9",
+  "created_at": "2026-06-21T09:48:40.635380+00:00"
+}

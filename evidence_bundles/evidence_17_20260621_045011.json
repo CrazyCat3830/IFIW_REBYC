@@ -1,0 +1,7 @@
+{
+  "incident_id": 17,
+  "packet_count": 0,
+  "pcap_path": "evidence_bundles\\evidence_17_20260621_045011.pcap",
+  "sha256": "acc530668c8bc60b2d229281130b1899bfc81d70fdada5c34b3236c628f739c8",
+  "created_at": "2026-06-21T04:50:11.970481+00:00"
+}
